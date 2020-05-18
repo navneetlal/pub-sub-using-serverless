@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Subscriber service
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  SubscriberFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ""
+      Handler: Subscriber::Subscriber.Function::FunctionHandler
+      Runtime: dotnetcore3.1
+      Events:
+        SqsEvent:
+          Type: SQS
+          Properties:
+            Queue: !Sub "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:samplequeue"
+            BatchSize: 1
+
+Outputs:
+  SubscriberFunction:
+    Description: "Subscriber Lambda Function ARN"
+    Value: !GetAtt SubscriberFunction.Arn
+  SubscriberFunctionIamRole:
+    Description: "Implicit IAM Role created for Subscriber function"
+    Value: !GetAtt SubscriberFunctionRole.Arn

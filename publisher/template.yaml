@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Publisher Service
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  PublisherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ""
+      Handler: Publisher::Publisher.Function::FunctionHandler
+      Runtime: dotnetcore3.1
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'sns:Publish'
+              Resource:
+                - '*'
+      Environment:
+        Variables:
+          TOPIC_ARN: !Sub "arn:aws:sns:${AWS::Region}:${AWS::AccountId}:sampletopic"
+      Events:
+        Publisher:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: get
+
+Outputs:
+  PublisherApi:
+    Description: "API Gateway endpoint URL for Prod stage for Publisher function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  PublisherFunction:
+    Description: "Publisher Lambda Function ARN"
+    Value: !GetAtt PublisherFunction.Arn
+  PublisherFunctionIamRole:
+    Description: "Implicit IAM Role created for Publisher function"
+    Value: !GetAtt PublisherFunctionRole.Arn

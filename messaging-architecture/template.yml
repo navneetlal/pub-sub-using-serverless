@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: SAM template to create sample messaging architechture
+
+Parameters:
+  SNSTopicName:
+    Type: String
+    Description: Name of the SNS Topic
+    MinLength: 0
+  SQSQueueName:
+    Type: String
+    Description: Name of the Subscriber Queue
+    MinLength: 0
+
+Conditions:
+  SNSTopicNameGenerated:
+    Fn::Equals:
+      - Ref: SNSTopicName
+      - false
+  SQSQueueNameGenerated:
+    Fn::Equals:
+      - Ref: SQSQueueName
+      - false
+
+Resources:
+  FirstSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Fn::If:
+          - SNSTopicNameGenerated
+          - Ref: AWS::NoValue
+          - Ref: SNSTopicName
+
+  FirstSQSQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName:
+        Fn::If:
+          - SQSQueueNameGenerated
+          - Ref: AWS::NoValue
+          - Ref: SQSQueueName
+
+  FirstSNSTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !GetAtt FirstSQSQueue.Arn
+      Protocol: sqs
+      TopicArn:
+        Ref: FirstSNSTopic
+
+  SQSQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        {
+          "Version": "2012-10-17",
+          "Statement":
+            [
+              {
+                "Effect": "Allow",
+                "Principal": { "AWS": "*" },
+                "Action": "SQS:SendMessage",
+                "Resource": { "Fn::GetAtt": ["FirstSQSQueue", "Arn"] },
+                "Condition":
+                  {
+                    "ArnEquals":
+                      { "aws:SourceArn": { "Ref": "FirstSNSTopic" } },
+                  },
+              },
+              {
+                "Effect": "Allow",
+                "Principal": { "AWS": "*" },
+                "Action": ["SQS:ReceiveMessage", "SQS:DeleteMessage", "SQS:GetQueueAttributes"],
+                "Resource": "*",
+              },
+            ],
+        }
+      Queues:
+        - Ref: FirstSQSQueue
+
+Outputs:
+  SNSTopicARN:
+    Description: ARN of the SNS Topic
+    Value:
+      Ref: FirstSNSTopic
+  SNSTopicName:
+    Description: Name of the topic
+    Value: !GetAtt FirstSNSTopic.TopicName
+  SQSQueueARN:
+    Description: ARN of the SQS Queue
+    Value: !GetAtt FirstSQSQueue.Arn
+  SQSQueueName:
+    Description: Name of the topic
+    Value: !GetAtt FirstSQSQueue.QueueName
+  SQSQueueURL:
+    Description: URL of the SQS Queue
+    Value:
+      Ref: FirstSQSQueue
